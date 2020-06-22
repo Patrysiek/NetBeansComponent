@@ -5,13 +5,29 @@
  */
 package com.weii.weathercomponent;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.weii.weathercomponent.weather.WeatherInfoModel;
 import java.awt.Color;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.net.URISyntaxException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 
 /**
  *
@@ -27,6 +43,11 @@ public class WeatherComponent extends javax.swing.JPanel {
     public WeatherComponent() {
         initComponents();
         propertyChangeSupport=new PropertyChangeSupport(this);
+        initListModel();
+        initListView();
+        initSearchMechanism();
+        initClearButton();
+        initSaveButton();
     }
     @Override
     public void addPropertyChangeListener(PropertyChangeListener l) {
@@ -391,4 +412,129 @@ public class WeatherComponent extends javax.swing.JPanel {
     public void setSaveButton(JButton saveButton) {
         this.saveButton = saveButton;
     }
+    
+    
+    
+    private DefaultListModel<String> historyListModel;
+    private List<WeatherInfoModel> weatherList;
+    private WeatherInfoModel currentWeather;
+    // End of variables declaration                   
+
+    private void initListView() {
+       historyListModel = new DefaultListModel<>();
+       weatherList.forEach(x->{
+           addElementToHistoryModel(x);
+        
+       });
+       this.getHistoryList().setModel(historyListModel);
+       this.getHistoryList().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+       this.getHistoryList().addListSelectionListener(x->{
+           int index = x.getFirstIndex();
+           currentWeather = weatherList.get(index);
+           setValuesFromWeather(currentWeather);
+        });
+    }
+    private void initListModel() {
+        try {
+            this.weatherList = new ArrayList<>(WeatherInfoFileManager.readListFromFile());
+        } catch (URISyntaxException | IOException ex) {
+            this.weatherList = new ArrayList<>();
+            ex.printStackTrace();
+        }
+    }
+    
+    private void initSaveButton(){
+        this.getSaveButton().addActionListener(x->{
+            if(currentWeather==null){
+                return;
+            }
+            this.weatherList.add(currentWeather);
+            try {
+                WeatherInfoFileManager.saveToFile(weatherList);
+                addElementToHistoryModel(currentWeather);
+            } catch (URISyntaxException | IOException ex) {
+                Logger.getLogger(WeatherComponent.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            
+        });
+    }
+    
+    private void initClearButton(){
+        this.getClearButton().addActionListener(x->{
+        this.getCityLabel().setText("City");
+        this.getPressLabel().setText("Pressure");
+        this.getCoordsLabel().setText("Lat");
+        this.getDateLabel().setText("Date");
+        this.getSunLabel().setText("Sunset");
+        this.getTempLabel().setText("Temperature");
+        this.getPressLabel().setText("Sunrise");
+        this.currentWeather = null;
+        });
+    }
+    
+    private void initSearchMechanism() {
+        this.getSearchButton().addActionListener(x->searchForTheWeather());
+    }
+
+    private String obtainDateFromSeconds(Integer dt) {
+        return LocalDateTime.ofInstant(Instant.ofEpochSecond(dt),ZoneId.systemDefault()).format(DateTimeFormatter.ISO_LOCAL_DATE);
+    }
+    
+        private String obtainHoursFromMillis(Integer dt) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(dt),ZoneId.systemDefault()).format(DateTimeFormatter.ISO_TIME);
+    }
+
+    private void setValuesFromWeather(WeatherInfoModel weatherModel) {
+        double temp = round(weatherModel.getMain().getTemp()-273.15,2);
+        this.getCityLabel().setText("City "+weatherModel.getName());
+        this.getPressLabel().setText("Pressure "+String.valueOf(weatherModel.getMain().getPressure()));
+        this.getCoordsLabel().setText("Lat "+weatherModel.getCoord().getLat()+" Lon "+weatherModel.getCoord().getLon());
+        this.getDateLabel().setText("Date "+obtainDateFromSeconds(weatherModel.getDt()));
+        this.getTempLabel().setText("Temperature "+String.valueOf(temp)+" C");
+        this.getSunLabel().setText("Sunset "+obtainHoursFromMillis(weatherModel.getSys().getSunset())+" Sunrise "+obtainHoursFromMillis(weatherModel.getSys().getSunrise()));
+        this.getPressLabel().setText("Pressure "+weatherModel.getMain().getPressure()+" hPa");
+        this.getHumLabel().setText("Humidity "+String.valueOf(weatherModel.getMain().getHumidity())+" %");
+    }
+
+  private boolean isDoubleOrInt(String doubleOrInt){
+    return doubleOrInt.matches("^-?[0-9]+.?[0-9]{0,5}?$");
+  }
+
+    private void addElementToHistoryModel(WeatherInfoModel x) {
+        String date = obtainDateFromSeconds(x.getDt()); 
+        String coords = "lat "+x.getCoord().getLat() +" lon "+x.getCoord().getLon();
+        historyListModel.addElement(date+" "+coords);
+        getHistoryList().setModel(historyListModel);
+    }
+
+    private void searchForTheWeather() {
+             String searchText = this.getSearchField().getText().trim();
+           
+           if(searchText.isEmpty()){
+               return;
+           }
+           String jsonWeather;
+           if(searchText.contains(",")){
+               String[] coords = searchText.split(",");
+               if(!isDoubleOrInt(coords[0]) || !isDoubleOrInt(coords[1])){
+                   return;
+               }
+               jsonWeather = ApiHandler.getWeatherInfo(Double.valueOf(coords[0]),Double.valueOf(coords[1]));
+           }else{
+               jsonWeather = ApiHandler.getWeatherInfo(searchText);
+           }
+          
+            try {
+                currentWeather = CommonUtils.getMapper().readValue(jsonWeather,WeatherInfoModel.class);
+                setValuesFromWeather(currentWeather);
+            } catch (JsonProcessingException ex) {
+            }
+    }
+    public static double round(double value, int places) {
+    if (places < 0) throw new IllegalArgumentException();
+
+    BigDecimal bd = BigDecimal.valueOf(value);
+    bd = bd.setScale(places, RoundingMode.HALF_UP);
+    return bd.doubleValue();
+}
 }
