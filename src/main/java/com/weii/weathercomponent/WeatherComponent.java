@@ -56,6 +56,12 @@ public class WeatherComponent extends javax.swing.JPanel {
             return;
 //        propertyChangeSupport.addPropertyChangeListener(l);
     }
+    
+    /**
+     * 
+     * Method which enable black theme on the component
+     * @param blackThemeEnabled defines wether black theme is enabled or disabled
+     */
     public void setBlackThemeEnabled(boolean blackThemeEnabled){
         propertyChangeSupport.firePropertyChange("direction", this.blackThemeEnabled, blackThemeEnabled);
         this.blackThemeEnabled = blackThemeEnabled;       
@@ -420,6 +426,9 @@ public class WeatherComponent extends javax.swing.JPanel {
     private WeatherInfoModel currentWeather;
     // End of variables declaration                   
 
+    /**
+     * init list view for history of weathers
+     */
     private void initListView() {
        historyListModel = new DefaultListModel<>();
        weatherList.forEach(x->{
@@ -458,7 +467,9 @@ public class WeatherComponent extends javax.swing.JPanel {
             
         });
     }
-    
+    /**
+     * Inits button which clear all the labels
+     */
     private void initClearButton(){
         this.getClearButton().addActionListener(x->{
         this.getCityLabel().setText("City");
@@ -483,7 +494,10 @@ public class WeatherComponent extends javax.swing.JPanel {
         private String obtainHoursFromMillis(Integer dt) {
         return LocalDateTime.ofInstant(Instant.ofEpochMilli(dt),ZoneId.systemDefault()).format(DateTimeFormatter.ISO_TIME);
     }
-
+/**
+ * Sets value from weatherModel to labels
+ * @param weatherModel the data model
+ */
     private void setValuesFromWeather(WeatherInfoModel weatherModel) {
         double temp = round(weatherModel.getMain().getTemp()-273.15,2);
         this.getCityLabel().setText("City "+weatherModel.getName());
@@ -500,6 +514,10 @@ public class WeatherComponent extends javax.swing.JPanel {
     return doubleOrInt.matches("^-?[0-9]+.?[0-9]{0,5}?$");
   }
 
+  /**
+   * Adds element to history
+   * @param x WeatherInfoModel object
+   */
     private void addElementToHistoryModel(WeatherInfoModel x) {
         String date = obtainDateFromSeconds(x.getDt()); 
         String coords = "lat "+x.getCoord().getLat() +" lon "+x.getCoord().getLon();

@@ -22,7 +22,12 @@ import java.util.List;
 public class WeatherInfoFileManager {
     private static final String PATH = "weathers";
 
-    
+    /**
+     * 
+     * @return List of WeaterInfoModel business object
+     * @throws URISyntaxException called when path to file is not set properly
+     * @throws IOException  throws when there is issue with wifle
+     */
     public static List<WeatherInfoModel> readListFromFile() throws URISyntaxException, IOException{
         StringBuilder sb = CommonUtils.getSTRING_BUILDER();
         tryCreateFile();
@@ -35,6 +40,12 @@ public class WeatherInfoFileManager {
         return CommonUtils.getMapper().readValue(sb.toString(), CommonUtils.getMapper().getTypeFactory().constructCollectionType(List.class, WeatherInfoModel.class));
     }
     
+    /**
+     * Saves weather list to file
+     * @param weatherList model object which is written to file in json 
+     * @throws URISyntaxException
+     * @throws IOException 
+     */
     public static void saveToFile(List<WeatherInfoModel> weatherList) throws URISyntaxException, IOException{
         String json = CommonUtils.getMapper().writeValueAsString(weatherList);
 

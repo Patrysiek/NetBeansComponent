@@ -8,7 +8,8 @@ package com.weii.weathercomponent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- *
+ *Class for defining one and only object mapper and stringbuilder
+ * 
  * @author Patryk
  */
 public class CommonUtils {

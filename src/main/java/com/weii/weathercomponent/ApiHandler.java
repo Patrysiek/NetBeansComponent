@@ -51,6 +51,12 @@ public class ApiHandler {
         return "";
     }
     
+    /**
+     * Method which call external service to obtain weather info
+     * @param lat - latitude
+     * @param lon - longitude
+     * @return json string of weather information or empty string if error occurs
+     */
     public static String getWeatherInfo(double lat, double lon){
         String url = CommonUtils.getSTRING_BUILDER().append(URL)
                 .append("?lat=").append(lat)
